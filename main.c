@@ -38,7 +38,9 @@
 #define COMMIT(x, y) (chunk[x][y] >>= 1)
 #define PERSIST(x, y) (chunk[x][y] |= (chunk[x][y] << 1))
 
+#ifndef rowlen
 #define rowlen 32768
+#endif
 
 /***************************************************************************/
 /* Global Vars *************************************************************/
