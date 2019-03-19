@@ -52,7 +52,6 @@ int g_ticks;
 double g_threshold;
 
 pthread_barrier_t barrier;
-pthread_barrier_attr_t barrier_attr;
 typedef unsigned char row[rowlen];
 row* chunk;
 
@@ -84,7 +83,6 @@ int main(int argc, char* argv[])
     int mpi_commsize;
     int rows_per_chunk;
     int threads_per_rank;
-    pthread_attr_t attr;
     pthread_t threads[MAX_ADDITIONAL_THREAD_COUNT];
     int start_end[MAX_ADDITIONAL_THREAD_COUNT + 1][2];
     // Example MPI startup and using CLCG4 RNG
@@ -101,7 +99,7 @@ int main(int argc, char* argv[])
     threads_per_rank = atoi(argv[1]);
     g_ticks = atoi(argv[2]);
     g_threshold = strtod(argv[3], NULL);
-    pthread_barrier_init(&barrier, &attr, threads_per_rank);
+    pthread_barrier_init(&barrier, NULL, threads_per_rank);
 
     // Init 32,768 RNG streams - each rank has an independent stream
     InitDefault();
@@ -127,7 +125,7 @@ int main(int argc, char* argv[])
         for (i = 0; i < threads_per_rank - 1; i++) {
             start_end[i][0] = i * rows_per_thread;
             start_end[i][1] = (i + 1) * rows_per_thread;
-            pthread_create(&threads[i], &attr, do_ticks, &start_end[i]);
+            pthread_create(&threads[i], NULL, do_ticks, &start_end[i]);
         }
         // start this thread's work as well
         start_end[i][0] = i * rows_per_thread;
