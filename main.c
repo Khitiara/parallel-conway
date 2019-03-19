@@ -69,10 +69,12 @@ int main(int argc, char* argv[])
     //    int i = 0;
     int mpi_myrank;
     int mpi_commsize;
+    int rows_per_chunk;
     // Example MPI startup and using CLCG4 RNG
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_commsize);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_myrank);
+    rows_per_chunk = rowlen / mpi_commsize;
 
     // Init 32,768 RNG streams - each rank has an independent stream
     InitDefault();
@@ -86,9 +88,15 @@ int main(int argc, char* argv[])
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Insert your code
+    
+    // create our personal chunk of the universe
+    // chunk[-1] is the ghost row at the start,
+    // chunk[rows_per_chunk] is the ghost row at the end
+    chunk = calloc(rows_per_chunk + 2, sizeof(row)) + 1;
 
     // END -Perform a barrier and then leave MPI
     MPI_Barrier(MPI_COMM_WORLD);
+    free(chunk - 1);
     MPI_Finalize();
     return 0;
 }
