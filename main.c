@@ -132,11 +132,11 @@ void tick(int start, int end)
             }
             // Cell dies if less than 2 or more than 3 neighbors
             if (living_neighbors < 2 || living_neighbors > 3) {
-                KILL(x, y);
+                KILL(i, j);
             } else if (living_neighbors == 3) { // Cell is born with exactly 3 neighbors
-                BIRTH(x, y);
+                BIRTH(i, j);
             } else {
-                PERSIST(x, y); // Nothing changes otherwise
+                PERSIST(i, j); // Nothing changes otherwise
             }
         }
     }
