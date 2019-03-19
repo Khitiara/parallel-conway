@@ -105,7 +105,8 @@ int main(int argc, char* argv[])
     // create our personal chunk of the universe
     // chunk[-1] is the ghost row at the start,
     // chunk[rows_per_chunk] is the ghost row at the end
-    chunk = calloc(rows_per_chunk + 2, sizeof(row)) + 1;
+    chunk = calloc(rows_per_chunk + 2, sizeof(row));
+    chunk++;
     {
         // create and start the correct number of additional threads
         int i;
