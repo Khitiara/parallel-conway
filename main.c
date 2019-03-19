@@ -121,7 +121,6 @@ int main(int argc, char* argv[])
         // create and start the correct number of additional threads
         int i;
         int rows_per_thread = rows_per_chunk / threads_per_rank;
-        pthread_attr_init(&attr);
         for (i = 0; i < threads_per_rank - 1; i++) {
             start_end[i][0] = i * rows_per_thread;
             start_end[i][1] = (i + 1) * rows_per_thread;
