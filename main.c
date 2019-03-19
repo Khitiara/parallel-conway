@@ -185,5 +185,7 @@ void commit(int start, int end)
 
 void* do_ticks(void* arg)
 {
+    int(*bounds)[2] = arg;
+    int start = (*bounds)[0], end = (*bounds)[1];
     return NULL;
 }

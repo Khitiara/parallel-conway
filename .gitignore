@@ -3,3 +3,4 @@ pconway
 .directory
 *.kate-swp
 .vscode
+.exrc
