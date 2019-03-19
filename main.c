@@ -105,40 +105,52 @@ int main(int argc, char* argv[])
 /* Other Functions - You write as part of the assignment********************/
 /***************************************************************************/
 
+/** 
+ * Run a single tick of the simulation. Does not commit.
+ */
 void tick(int start, int end)
 {
     int living_neighbors, x, y, i, j, k, l;
     for (i = 0; i < rowlen; ++i) {
         for (j = start; j < end; ++j) {
+
             living_neighbors = 0;
+            // Loop over 3x3 section centered on i,j
             for (k = -1; k <= 1; ++k) {
                 for (l = -1; l <= 1; ++l) {
+                    // Exclude current cell
                     if (k != 0 || l != 0) {
+                        // Get actual coordinates
                         x = (i + k) % rowlen;
                         y = j + l;
+                        // Check the cell
                         if (CHECK(x, y)) {
                             ++living_neighbors;
                         }
                     }
                 }
             }
+            // Cell dies if less than 2 or more than 3 neighbors
             if (living_neighbors < 2 || living_neighbors > 3) {
                 KILL(x, y);
-            } else if (living_neighbors == 3) {
+            } else if (living_neighbors == 3) { // Cell is born with exactly 3 neighbors
                 BIRTH(x, y);
             } else {
-                PERSIST(x, y);
+                PERSIST(x, y); // Nothing changes otherwise
             }
         }
     }
 }
 
+/**
+ * Commit a section of the chunk.
+ */
 void commit(int start, int end)
 {
     int i, j;
     for (i = 0; i < rowlen; ++i) {
         for (j = start; j < end; ++j) {
-            COMMIT(x, y);
+            COMMIT(i, j);
         }
     }
 }
