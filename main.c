@@ -18,8 +18,6 @@
 #include <mpi.h>
 #include <pthread.h>
 
-// #define BGQ 1 // when running BG/Q, comment out when testing on mastiff
-
 #if BGQ == 1
 #include <hwi/include/gqc/A2_inlines.h>
 #else
@@ -33,10 +31,11 @@
 #define ALIVE 1
 #define DEAD 0
 
-#define CHECK(cell) (cell & 1)
-#define BIRTH(cell) (cell |= 2)
-#define KILL(cell) (cell &= ~2)
-#define COMMIT(cell) (cell >>= 1)
+#define CHECK(x, y) (chunk[x][y] & 1)
+#define BIRTH(x, y) (chunk[x][y] |= 2)
+#define KILL(x, y) (chunk[x][y] &= ~2)
+#define COMMIT(x, y) (chunk[x][y] >>= 1)
+#define PERSIST(x, y) (chunk[x][y] |= (chunk[x][y] << 1))
 
 #define rowlen 32768
 
@@ -57,6 +56,9 @@ row* chunk;
 /***************************************************************************/
 /* Function Decs ***********************************************************/
 /***************************************************************************/
+
+void tick(int start, int end);
+void commit(int start, int end);
 
 // You define these
 
@@ -87,8 +89,6 @@ int main(int argc, char* argv[])
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Insert your code
-    
     // create our personal chunk of the universe
     // chunk[-1] is the ghost row at the start,
     // chunk[rows_per_chunk] is the ghost row at the end
@@ -104,3 +104,41 @@ int main(int argc, char* argv[])
 /***************************************************************************/
 /* Other Functions - You write as part of the assignment********************/
 /***************************************************************************/
+
+void tick(int start, int end)
+{
+    int living_neighbors, x, y, i, j, k, l;
+    for (i = 0; i < rowlen; ++i) {
+        for (j = start; j < end; ++j) {
+            living_neighbors = 0;
+            for (k = -1; k <= 1; ++k) {
+                for (l = -1; l <= 1; ++l) {
+                    if (k != 0 || l != 0) {
+                        x = (i + k) % rowlen;
+                        y = j + l;
+                        if (CHECK(x, y)) {
+                            ++living_neighbors;
+                        }
+                    }
+                }
+            }
+            if (living_neighbors < 2 || living_neighbors > 3) {
+                KILL(x, y);
+            } else if (living_neighbors == 3) {
+                BIRTH(x, y);
+            } else {
+                PERSIST(x, y);
+            }
+        }
+    }
+}
+
+void commit(int start, int end)
+{
+    int i, j;
+    for (i = 0; i < rowlen; ++i) {
+        for (j = start; j < end; ++j) {
+            COMMIT(x, y);
+        }
+    }
+}
