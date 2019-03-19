@@ -56,7 +56,7 @@ typedef unsigned char row[rowlen];
 row* chunk;
 
 /***************************************************************************/
-/* Function Decs ***********************************************************/
+/* Function Decls **********************************************************/
 /***************************************************************************/
 
 void tick(int start, int end);
@@ -192,6 +192,9 @@ void commit(int start, int end)
     }
 }
 
+/**
+ * Run current thread - takes the start and end row bounds (inclusive start, exclusive end)
+ */
 void* do_ticks(void* arg)
 {
     int(*bounds)[2] = arg;
