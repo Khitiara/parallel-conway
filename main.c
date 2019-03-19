@@ -201,7 +201,9 @@ void* do_ticks(void* arg)
     int start = (*bounds)[0], end = (*bounds)[1];
     int i, ticks = g_ticks;
     for (i = 0; i < ticks; i++) {
-        // do stuff
+        // TODO: check for main thread and recv ghost rows from MPI
+        tick(start, end);
+        commit(start, end);
     }
     return NULL;
 }
