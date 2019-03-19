@@ -51,8 +51,8 @@ unsigned long long g_end_cycles = 0;
 int g_ticks;
 double g_threshold;
 
-// You define these
-
+pthread_barrier_t barrier;
+pthread_barrier_attr_t barrier_attr;
 typedef unsigned char row[rowlen];
 row* chunk;
 
@@ -101,6 +101,7 @@ int main(int argc, char* argv[])
     threads_per_rank = atoi(argv[1]);
     g_ticks = atoi(argv[2]);
     g_threshold = strtod(argv[3], NULL);
+    pthread_barrier_init(&barrier, &attr, threads_per_rank);
 
     // Init 32,768 RNG streams - each rank has an independent stream
     InitDefault();
@@ -135,6 +136,7 @@ int main(int argc, char* argv[])
     }
     // END -Perform a barrier and then leave MPI
     MPI_Barrier(MPI_COMM_WORLD);
+    pthread_barrier_destroy(&barrier);
     free(chunk - 1);
     MPI_Finalize();
     return 0;
