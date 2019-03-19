@@ -30,6 +30,7 @@
 
 #define ALIVE 1
 #define DEAD 0
+#define MAX_ADDITIONAL_THREAD_COUNT 63
 
 #define CHECK(x, y) (chunk[x][y] & 1)
 #define BIRTH(x, y) (chunk[x][y] |= 2)
@@ -59,6 +60,7 @@ row* chunk;
 
 void tick(int start, int end);
 void commit(int start, int end);
+void* do_ticks(void* arg);
 
 // You define these
 
@@ -72,11 +74,22 @@ int main(int argc, char* argv[])
     int mpi_myrank;
     int mpi_commsize;
     int rows_per_chunk;
+    int threads_per_rank;
+    pthread_attr_t attr;
+    pthread_t threads[MAX_ADDITIONAL_THREAD_COUNT];
+    int start_end[MAX_ADDITIONAL_THREAD_COUNT + 1][2];
     // Example MPI startup and using CLCG4 RNG
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_commsize);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_myrank);
+
+    // check and gather arguments
+    if (argc != 2) {
+        puts("Usage: pconway <threads per rank>");
+        exit(1);
+    }
     rows_per_chunk = rowlen / mpi_commsize;
+    threads_per_rank = atoi(argv[1]);
 
     // Init 32,768 RNG streams - each rank has an independent stream
     InitDefault();
@@ -93,7 +106,21 @@ int main(int argc, char* argv[])
     // chunk[-1] is the ghost row at the start,
     // chunk[rows_per_chunk] is the ghost row at the end
     chunk = calloc(rows_per_chunk + 2, sizeof(row)) + 1;
-
+    {
+        // create and start the correct number of additional threads
+        int i;
+        int rows_per_thread = rows_per_chunk / threads_per_rank;
+        pthread_attr_init(&attr);
+        for (i = 0; i < threads_per_rank - 1; i++) {
+            start_end[i][0] = i * rows_per_thread;
+            start_end[i][1] = (i + 1) * rows_per_thread;
+            pthread_create(&threads[i], &attr, do_ticks, &start_end[i]);
+        }
+        // start this thread's work as well
+        start_end[i][0] = i * rows_per_thread;
+        start_end[i][1] = (i + 1) * rows_per_thread;
+        do_ticks(&start_end[i]);
+    }
     // END -Perform a barrier and then leave MPI
     MPI_Barrier(MPI_COMM_WORLD);
     free(chunk - 1);
@@ -105,7 +132,7 @@ int main(int argc, char* argv[])
 /* Other Functions - You write as part of the assignment********************/
 /***************************************************************************/
 
-/** 
+/**
  * Run a single tick of the simulation. Does not commit.
  */
 void tick(int start, int end)
@@ -153,4 +180,9 @@ void commit(int start, int end)
             COMMIT(i, j);
         }
     }
+}
+
+void* do_ticks(void* arg)
+{
+    return NULL;
 }
