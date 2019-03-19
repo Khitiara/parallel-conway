@@ -48,6 +48,8 @@ double g_time_in_secs = 0;
 double g_processor_frequency = 1600000000.0; // processing speed for BG/Q
 unsigned long long g_start_cycles = 0;
 unsigned long long g_end_cycles = 0;
+int g_ticks;
+double g_threshold;
 
 // You define these
 
@@ -68,6 +70,13 @@ void* do_ticks(void* arg);
 /* Function: Main **********************************************************/
 /***************************************************************************/
 
+/**
+ * Arguments:
+ *  1 - number of threads per rank (including this one)
+ *  2 - number of ticks
+ *  3 - threshold
+ *  4 - output file name
+ */
 int main(int argc, char* argv[])
 {
     //    int i = 0;
@@ -84,12 +93,14 @@ int main(int argc, char* argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_myrank);
 
     // check and gather arguments
-    if (argc != 2) {
-        puts("Usage: pconway <threads per rank>");
+    if (argc != 5) {
+        puts("Usage: pconway <threads per rank> <ticks> <threshold> <output file>");
         exit(1);
     }
     rows_per_chunk = rowlen / mpi_commsize;
     threads_per_rank = atoi(argv[1]);
+    g_ticks = atoi(argv[2]);
+    g_threshold = strtod(argv[3], NULL);
 
     // Init 32,768 RNG streams - each rank has an independent stream
     InitDefault();
@@ -185,5 +196,9 @@ void commit(int start, int end)
 
 void* do_ticks(void* arg)
 {
+    int i, ticks = g_ticks;
+    for (i = 0; i < ticks; i++) {
+        // do stuff
+    }
     return NULL;
 }
