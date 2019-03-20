@@ -149,21 +149,21 @@ int main(int argc, char* argv[])
  */
 void tick(int start, int end)
 {
-    int living_neighbors, x, y, i, j, k, l;
-    for (i = 0; i < rowlen; ++i) {
-        for (j = start; j < end; ++j) {
+    int living_neighbors, r, c, dr, dc, r1, c1;
+    for (r = start; r < end; ++r) {
+        for (c = 0; c < rowlen; ++c) {
 
             living_neighbors = 0;
             // Loop over 3x3 section centered on i,j
-            for (k = -1; k <= 1; ++k) {
-                for (l = -1; l <= 1; ++l) {
+            for (dr = -1; dr <= 1; ++dr) {
+                for (dc = -1; dc <= 1; ++dc) {
                     // Exclude current cell
-                    if (k != 0 || l != 0) {
+                    if (dr != 0 || dc != 0) {
                         // Get actual coordinates
-                        x = (i + k) % rowlen;
-                        y = j + l;
+                        c1 = (c + dc) % rowlen;
+                        r1 = r + dr;
                         // Check the cell
-                        if (CHECK(x, y)) {
+                        if (CHECK(r1, c1)) {
                             ++living_neighbors;
                         }
                     }
@@ -171,11 +171,11 @@ void tick(int start, int end)
             }
             // Cell dies if less than 2 or more than 3 neighbors
             if (living_neighbors < 2 || living_neighbors > 3) {
-                KILL(i, j);
+                KILL(r, c);
             } else if (living_neighbors == 3) { // Cell is born with exactly 3 neighbors
-                BIRTH(i, j);
+                BIRTH(r, c);
             } else {
-                PERSIST(i, j); // Nothing changes otherwise
+                PERSIST(r, c); // Nothing changes otherwise
             }
         }
     }
@@ -186,10 +186,10 @@ void tick(int start, int end)
  */
 void commit(int start, int end)
 {
-    int i, j;
-    for (i = 0; i < rowlen; ++i) {
-        for (j = start; j < end; ++j) {
-            COMMIT(i, j);
+    int r, c;
+    for (r = start; r < end; ++r) {
+        for (c = 0; c < rowlen; ++c) {
+            COMMIT(r, c);
         }
     }
 }
