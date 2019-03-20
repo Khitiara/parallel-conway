@@ -53,6 +53,11 @@ unsigned long long g_end_cycles = 0;
 int g_ticks;
 double g_threshold;
 
+// useful runtime constants
+int mpi_myrank;
+int mpi_commsize;
+int rows_per_chunk;
+
 pthread_barrier_t barrier;
 typedef unsigned char row[rowlen];
 row* chunk;
@@ -78,10 +83,6 @@ void* do_ticks(void* arg);
  */
 int main(int argc, char* argv[])
 {
-    //    int i = 0;
-    int mpi_myrank;
-    int mpi_commsize;
-    int rows_per_chunk;
     int threads_per_rank;
     pthread_t threads[MAX_ADDITIONAL_THREAD_COUNT];
     int start_end[MAX_ADDITIONAL_THREAD_COUNT + 1][2];
@@ -121,15 +122,15 @@ int main(int argc, char* argv[])
         // create and start the correct number of additional threads
         int i;
         int rows_per_thread = rows_per_chunk / threads_per_rank;
-        for (i = 0; i < threads_per_rank - 1; i++) {
+        for (i = 1; i < threads_per_rank; i++) {
             start_end[i][0] = i * rows_per_thread;
             start_end[i][1] = (i + 1) * rows_per_thread;
-            pthread_create(&threads[i], NULL, do_ticks, &start_end[i]);
+            pthread_create(&threads[i - 1], NULL, do_ticks, &start_end[i]);
         }
         // start this thread's work as well
-        start_end[i][0] = i * rows_per_thread;
-        start_end[i][1] = (i + 1) * rows_per_thread;
-        do_ticks(&start_end[i]);
+        start_end[0][0] = 0;
+        start_end[0][1] = rows_per_thread;
+        do_ticks(&start_end[0]);
     }
     // END -Perform a barrier and then leave MPI
     MPI_Barrier(MPI_COMM_WORLD);
@@ -200,11 +201,18 @@ void* do_ticks(void* arg)
 {
     int(*bounds)[2] = arg;
     int start = (*bounds)[0], end = (*bounds)[1];
-    int i, ticks = g_ticks;
+    int ticks = g_ticks, rows_per_rank = rows_per_chunk;
+    int i;
     for (i = 0; i < ticks; i++) {
         // TODO: check for main thread and recv ghost rows from MPI
         tick(start, end);
+        pthread_barrier_wait(&barrier);
         commit(start, end);
+        if (start == 0) {
+            printf("This is the main thread: global bounds=[%ld, %ld]\n",
+                (long)mpi_myrank * rows_per_rank + start,
+                (long)mpi_myrank * rows_per_rank + end);
+        }
     }
     return NULL;
 }
