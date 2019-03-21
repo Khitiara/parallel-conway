@@ -114,6 +114,10 @@ int main(int argc, char* argv[])
 
     MPI_Barrier(MPI_COMM_WORLD);
 
+    //start timer
+    if (mpi_myrank == 0) {
+        g_start_cycles = GetTimeBase();
+    }
     // create our personal chunk of the universe
     // chunk[-1] is the ghost row at the start,
     // chunk[rows_per_chunk] is the ghost row at the end
@@ -134,6 +138,26 @@ int main(int argc, char* argv[])
         start_end[0][0] = 0;
         start_end[0][1] = rows_per_thread;
         do_ticks(start_end[0]);
+        // wait for everyone to finish before stopping the timer
+        MPI_Barrier(MPI_COMM_WORLD);
+        // stop timer
+        if (mpi_myrank == 0) {
+            g_end_cycles = GetTimeBase();
+            printf("Computation statistics (additional output at '%s'):\n"
+                   "    Compute time (s): %f\n"
+                   "           MPI Ranks: %d\n"
+                   "    Threads per rank: %d\n"
+                   "       Total threads: %d\n"
+                   "       Rows per rank: %d\n"
+                   "     Rows per thread: %d\n",
+                   argv[5],
+                   (g_end_cycles - g_start_cycles) / g_processor_frequency,
+                   mpi_commsize,
+                   threads_per_rank,
+                   threads_per_rank * mpi_commsize,
+                   rows_per_chunk,
+                   rows_per_thread);
+        }
     }
     // END -Perform a barrier and then leave MPI
     MPI_Barrier(MPI_COMM_WORLD);
