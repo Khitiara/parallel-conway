@@ -79,7 +79,8 @@ void* do_ticks(void* arg);
  *  1 - number of threads per rank (including this one)
  *  2 - number of ticks
  *  3 - threshold
- *  4 - output file name
+ *  4 - output universe and heatmap (0 or 1)
+ *  5 - output file name
  */
 int main(int argc, char* argv[])
 {
@@ -92,8 +93,8 @@ int main(int argc, char* argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_myrank);
 
     // check and gather arguments
-    if (argc != 5) {
-        puts("Usage: pconway <threads per rank> <ticks> <threshold> <output file>");
+    if (argc != 6) {
+        puts("Usage: pconway <threads per rank> <ticks> <threshold> <output type> <output file>");
         exit(1);
     }
     rows_per_chunk = rowlen / mpi_commsize;
