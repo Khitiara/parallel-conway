@@ -59,6 +59,8 @@ int mpi_commsize;
 int rows_per_chunk;
 
 pthread_barrier_t barrier;
+pthread_t threads[MAX_ADDITIONAL_THREAD_COUNT];
+int start_end[MAX_ADDITIONAL_THREAD_COUNT + 2];
 typedef unsigned char row[rowlen];
 row* chunk;
 
@@ -85,8 +87,6 @@ void* do_ticks(void* arg);
 int main(int argc, char* argv[])
 {
     int threads_per_rank;
-    pthread_t threads[MAX_ADDITIONAL_THREAD_COUNT];
-    int start_end[MAX_ADDITIONAL_THREAD_COUNT + 1][2];
     // Example MPI startup and using CLCG4 RNG
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_commsize);
@@ -129,29 +129,35 @@ int main(int argc, char* argv[])
         // create and start the correct number of additional threads
         int i;
         int rows_per_thread = rows_per_chunk / threads_per_rank;
+        // initialize thread arguments
+        for (i = 0; i < threads_per_rank + 1; i++) {
+            start_end[i] = i * rows_per_thread;
+        }
         for (i = 1; i < threads_per_rank; i++) {
-            start_end[i][0] = i * rows_per_thread;
-            start_end[i][1] = (i + 1) * rows_per_thread;
-            pthread_create(&threads[i - 1], NULL, do_ticks, start_end[i]);
+            pthread_create(&threads[i - 1], NULL, do_ticks, &start_end[i]);
         }
         // start this thread's work as well
-        start_end[0][0] = 0;
-        start_end[0][1] = rows_per_thread;
-        do_ticks(start_end[0]);
+        do_ticks(&start_end[0]);
         // wait for everyone to finish before stopping the timer
         MPI_Barrier(MPI_COMM_WORLD);
         // stop timer
         if (mpi_myrank == 0) {
+            double time;
             g_end_cycles = GetTimeBase();
+            time = (g_end_cycles - g_start_cycles) / g_processor_frequency;
             printf("Computation statistics (additional output at '%s'):\n"
                    "    Compute time (s): %f\n"
+                   "       Compute ticks: %d\n"
+                   "   Avg time/tick (s): %f\n"
                    "           MPI Ranks: %d\n"
                    "    Threads per rank: %d\n"
                    "       Total threads: %d\n"
                    "       Rows per rank: %d\n"
                    "     Rows per thread: %d\n",
                    argv[5],
-                   (g_end_cycles - g_start_cycles) / g_processor_frequency,
+                   time,
+                   g_ticks,
+                   time / g_ticks,
                    mpi_commsize,
                    threads_per_rank,
                    threads_per_rank * mpi_commsize,
