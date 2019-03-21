@@ -213,6 +213,7 @@ void* do_ticks(void* arg)
                 (long)mpi_myrank * rows_per_rank + start,
                 (long)mpi_myrank * rows_per_rank + end);
         }
+        pthread_barrier_wait(&barrier);
     }
     return NULL;
 }
