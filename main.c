@@ -215,6 +215,22 @@ void tick(int start, int end)
 }
 
 /**
+ * Run a single random tick of the given row. Does not commit.
+ */
+void tick_randomly(int local_row, Gen g)
+{
+    int c;
+    for (c = 0; c < rowlen; c++) {
+        // randomly set to alive or dead
+        if (GenVal(g) < 0.5) {
+            BIRTH(local_row, c);
+        } else {
+            KILL(local_row, c);
+        }
+    }
+}
+
+/**
  * Commit a section of the chunk.
  */
 void commit(int start, int end)
