@@ -128,12 +128,12 @@ int main(int argc, char* argv[])
         for (i = 1; i < threads_per_rank; i++) {
             start_end[i][0] = i * rows_per_thread;
             start_end[i][1] = (i + 1) * rows_per_thread;
-            pthread_create(&threads[i - 1], NULL, do_ticks, &start_end[i]);
+            pthread_create(&threads[i - 1], NULL, do_ticks, start_end[i]);
         }
         // start this thread's work as well
         start_end[0][0] = 0;
         start_end[0][1] = rows_per_thread;
-        do_ticks(&start_end[0]);
+        do_ticks(start_end[0]);
     }
     // END -Perform a barrier and then leave MPI
     MPI_Barrier(MPI_COMM_WORLD);
@@ -202,8 +202,8 @@ void commit(int start, int end)
  */
 void* do_ticks(void* arg)
 {
-    int(*bounds)[2] = arg;
-    int start = (*bounds)[0], end = (*bounds)[1];
+    int* bounds = arg;
+    int start = bounds[0], end = bounds[1];
     int ticks = g_ticks, rows_per_rank = rows_per_chunk;
     int i;
     for (i = 0; i < ticks; i++) {
