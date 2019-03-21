@@ -118,6 +118,8 @@ int main(int argc, char* argv[])
     // chunk[-1] is the ghost row at the start,
     // chunk[rows_per_chunk] is the ghost row at the end
     chunk = calloc(rows_per_chunk + 2, sizeof(row));
+    // set every slot to ALIVE
+    memset(chunk, ALIVE, (rows_per_chunk + 2) * sizeof(row));
     chunk++;
     {
         // create and start the correct number of additional threads
