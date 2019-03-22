@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
             double time;
             g_end_cycles = GetTimeBase();
             time = (g_end_cycles - g_start_cycles) / g_processor_frequency;
-            printf("Computation statistics (additional output at '%s'):\n"
+            printf("Computation statistics:\n"
                    "    Compute time (s): %f\n"
                    "       Compute ticks: %d\n"
                    "   Avg time/tick (s): %f\n"
@@ -155,7 +155,6 @@ int main(int argc, char* argv[])
                    "       Total threads: %d\n"
                    "       Rows per rank: %d\n"
                    "     Rows per thread: %d\n",
-                argv[5],
                 time,
                 g_ticks,
                 time / g_ticks,
@@ -166,12 +165,25 @@ int main(int argc, char* argv[])
                 rows_per_thread);
         }
     }
-    // END -Perform a barrier and then leave MPI
-    MPI_Barrier(MPI_COMM_WORLD);
     pthread_barrier_destroy(&barrier);
+    // write universe to disk if specified
     if (atoi(argv[4])) {
+        // synchronize the ranks before starting timer
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (mpi_myrank == 0) {
+            g_start_cycles = GetTimeBase();
+        }
         write_universe(argv[5]);
+        // write_universe is already synchronized
+        if (mpi_myrank == 0) {
+            double time;
+            g_end_cycles = GetTimeBase();
+            time = (g_end_cycles - g_start_cycles) / g_processor_frequency;
+            printf("Universe data written to '%s'\n"
+                   "     IO run time (s): %f\n", argv[5], time);
+        }
     }
+    // END - leave MPI
     free(chunk - 1);
     MPI_Finalize();
     return 0;
