@@ -251,17 +251,38 @@ void* do_ticks(void* arg)
     int* bounds = arg;
     int start = bounds[0], end = bounds[1];
     int ticks = g_ticks, rows_per_rank = rows_per_chunk;
+    int myrank = mpi_myrank, commsize = mpi_commsize;
+    int prev_rank = (myrank - 1 + commsize) % commsize;
+    int next_rank = (myrank + 1) % commsize;
+    MPI_Request send[2];
+    MPI_Request recv[2];
     int i;
     for (i = 0; i < ticks; i++) {
         // TODO: check for main thread and recv ghost rows from MPI
         tick(start, end);
+        // wait for all threads to finish ticking before swapping out ghost rows
         pthread_barrier_wait(&barrier);
-        commit(start, end);
+        // thread 0 receives ghost rows via MPI
         if (start == 0) {
-            printf("This is the main thread: global bounds=[%ld, %ld]\n",
-                (long)mpi_myrank * rows_per_rank + start,
-                (long)mpi_myrank * rows_per_rank + end);
+            MPI_Irecv(&chunk[-1], rowlen, MPI_UNSIGNED_CHAR, prev_rank, i, MPI_COMM_WORLD, &recv[0]);
+            MPI_Irecv(&chunk[rows_per_rank], rowlen, MPI_UNSIGNED_CHAR, next_rank, i, MPI_COMM_WORLD, &recv[1]);
         }
+        commit(start, end);
+        // wait for all threads to finish commiting before sending boundary rows
+        pthread_barrier_wait(&barrier);
+        // thread 0 sends boundary rows
+        if (start == 0) {
+            MPI_Isend(&chunk[0], rowlen, MPI_UNSIGNED_CHAR, prev_rank, i, MPI_COMM_WORLD, &send[0]);
+            MPI_Isend(&chunk[rows_per_rank - 1], rowlen, MPI_UNSIGNED_CHAR, next_rank, i, MPI_COMM_WORLD, &send[1]);
+            printf("This is the main thread: global bounds=[%ld, %ld]\n",
+                (long)myrank * rows_per_rank + start,
+                (long)myrank * rows_per_rank + end);
+            // wait for ghost rows to be received and boundary rows to be sent
+            MPI_Waitall(2, recv, MPI_STATUSES_IGNORE);
+            MPI_Waitall(2, send, MPI_STATUSES_IGNORE);
+        }
+        // wait for all threads (read: thread 0/MPI) to finish before starting
+        // the next tick
         pthread_barrier_wait(&barrier);
     }
     return NULL;
