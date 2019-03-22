@@ -71,6 +71,7 @@ row* chunk;
 void tick(int start, int end);
 void commit(int start, int end);
 void* do_ticks(void* arg);
+void write_universe(const char* fpath);
 
 /***************************************************************************/
 /* Function: Main **********************************************************/
@@ -154,20 +155,23 @@ int main(int argc, char* argv[])
                    "       Total threads: %d\n"
                    "       Rows per rank: %d\n"
                    "     Rows per thread: %d\n",
-                   argv[5],
-                   time,
-                   g_ticks,
-                   time / g_ticks,
-                   mpi_commsize,
-                   threads_per_rank,
-                   threads_per_rank * mpi_commsize,
-                   rows_per_chunk,
-                   rows_per_thread);
+                argv[5],
+                time,
+                g_ticks,
+                time / g_ticks,
+                mpi_commsize,
+                threads_per_rank,
+                threads_per_rank * mpi_commsize,
+                rows_per_chunk,
+                rows_per_thread);
         }
     }
     // END -Perform a barrier and then leave MPI
     MPI_Barrier(MPI_COMM_WORLD);
     pthread_barrier_destroy(&barrier);
+    if (atoi(argv[4])) {
+        write_universe(argv[5]);
+    }
     free(chunk - 1);
     MPI_Finalize();
     return 0;
@@ -286,4 +290,17 @@ void* do_ticks(void* arg)
         pthread_barrier_wait(&barrier);
     }
     return NULL;
+}
+
+void write_universe(const char* fpath)
+{
+    int mpi_rank;
+    MPI_File fh;
+    MPI_File_open(MPI_COMM_WORLD, fpath, MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+    MPI_File_preallocate(fh, rowlen * rowlen);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    for (int i = 0; i < rows_per_chunk; ++i) {
+        MPI_File_write_at(fh, mpi_rank * rowlen, chunk[i], rowlen, MPI_UNSIGNED_CHAR, MPI_STATUS_IGNORE);
+    }
+    MPI_File_close(&fh);
 }
