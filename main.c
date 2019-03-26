@@ -31,6 +31,7 @@
 #define ALIVE 1
 #define DEAD 0
 #define MAX_ADDITIONAL_THREAD_COUNT 63
+#define MAX_TICKS 256
 
 #define CHECK(x, y) (chunk[x][y] & 1)
 #define BIRTH(x, y) (chunk[x][y] |= 2)
@@ -59,8 +60,11 @@ int mpi_commsize;
 int rows_per_chunk;
 
 pthread_barrier_t barrier;
+pthread_mutex_t alive_lock;
 pthread_t threads[MAX_ADDITIONAL_THREAD_COUNT];
 int start_end[MAX_ADDITIONAL_THREAD_COUNT + 2];
+int alive_count[MAX_TICKS];
+int final_alive_count[MAX_TICKS];
 typedef unsigned char row[rowlen];
 row* chunk;
 
@@ -71,7 +75,7 @@ row* chunk;
 void tick(int start, int end, int global_index_offset, double threshold);
 void tick_normally(int local_row);
 void tick_randomly(int local_row, Gen g);
-void commit(int start, int end);
+void commit(int start, int end, int* alive_count);
 void* do_ticks(void* arg);
 void write_universe(const char* fpath);
 
@@ -105,6 +109,7 @@ int main(int argc, char* argv[])
     g_ticks = atoi(argv[2]);
     g_threshold = strtod(argv[3], NULL);
     pthread_barrier_init(&barrier, NULL, threads_per_rank);
+    pthread_mutex_init(&alive_lock, NULL);
 
     // Init 32,768 RNG streams - each rank has an independent stream
     InitDefault();
@@ -135,11 +140,12 @@ int main(int argc, char* argv[])
         }
         // start this thread's work as well
         do_ticks(&start_end[0]);
-        // wait for everyone to finish before stopping the timer
-        MPI_Barrier(MPI_COMM_WORLD);
+        // collect alive counts
+        MPI_Reduce(alive_count, final_alive_count, MAX_TICKS, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
         // stop timer
         if (mpi_myrank == 0) {
             double time;
+            int ticks = g_ticks;
             g_end_cycles = GetTimeBase();
             time = (g_end_cycles - g_start_cycles) / g_processor_frequency;
             printf("Computation statistics:\n"
@@ -152,13 +158,17 @@ int main(int argc, char* argv[])
                    "       Rows per rank: %d\n"
                    "     Rows per thread: %d\n",
                 time,
-                g_ticks,
-                time / g_ticks,
+                ticks,
+                time / ticks,
                 mpi_commsize,
                 threads_per_rank,
                 threads_per_rank * mpi_commsize,
                 rows_per_chunk,
                 rows_per_thread);
+            puts("Alive statistics (CSV):\nTick,Alive");
+            for (i = 0; i < ticks; ++i) {
+                printf("%d,%d\n", i, final_alive_count[i]);
+            }
         }
     }
     pthread_barrier_destroy(&barrier);
@@ -257,12 +267,12 @@ void tick_randomly(int local_row, Gen g)
 /**
  * Commit a section of the chunk.
  */
-void commit(int start, int end)
+void commit(int start, int end, int* alive_cells)
 {
     int r, c;
     for (r = start; r < end; ++r) {
         for (c = 0; c < rowlen; ++c) {
-            COMMIT(r, c);
+            *alive_cells += COMMIT(r, c);
         }
     }
 }
@@ -284,6 +294,7 @@ void* do_ticks(void* arg)
     MPI_Request recv[2];
     int i;
     for (i = 0; i < ticks; i++) {
+        int alive_cells = 0;
         tick(start, end, global_index_offset, threshold);
         // wait for all threads to finish ticking before swapping out ghost rows
         pthread_barrier_wait(&barrier);
@@ -292,7 +303,11 @@ void* do_ticks(void* arg)
             MPI_Irecv(&chunk[-1], rowlen, MPI_UNSIGNED_CHAR, prev_rank, i, MPI_COMM_WORLD, &recv[0]);
             MPI_Irecv(&chunk[rows_per_rank], rowlen, MPI_UNSIGNED_CHAR, next_rank, i, MPI_COMM_WORLD, &recv[1]);
         }
-        commit(start, end);
+        commit(start, end, &alive_cells);
+        // put alive cell count into alive counts array
+        pthread_mutex_lock(&alive_lock);
+        alive_count[i] += alive_cells;
+        pthread_mutex_unlock(&alive_lock);
         // wait for all threads to finish commiting before sending boundary rows
         pthread_barrier_wait(&barrier);
         // thread 0 sends boundary rows
