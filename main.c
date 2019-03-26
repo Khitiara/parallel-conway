@@ -68,7 +68,9 @@ row* chunk;
 /* Function Decls **********************************************************/
 /***************************************************************************/
 
-void tick(int start, int end);
+void tick(int start, int end, int global_index_offset, double threshold);
+void tick_normally(int local_row);
+void tick_randomly(int local_row, Gen g);
 void commit(int start, int end);
 void* do_ticks(void* arg);
 void write_universe(const char* fpath);
@@ -106,12 +108,6 @@ int main(int argc, char* argv[])
 
     // Init 32,768 RNG streams - each rank has an independent stream
     InitDefault();
-
-    // Note, used the mpi_myrank to select which RNG stream to use.
-    // You must replace mpi_myrank with the right row being used.
-    // This just show you how to call the RNG.
-    printf("Rank %d of %d has been started and a first Random Value of %lf\n",
-        mpi_myrank, mpi_commsize, GenVal(mpi_myrank));
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -196,36 +192,48 @@ int main(int argc, char* argv[])
 /**
  * Run a single tick of the simulation. Does not commit.
  */
-void tick(int start, int end)
+void tick(int start, int end, int global_index_offset, double threshold)
 {
-    int living_neighbors, r, c, dr, dc, r1, c1;
+    int r;
     for (r = start; r < end; ++r) {
-        for (c = 0; c < rowlen; ++c) {
+        if (GenVal(global_index_offset + r) < threshold) {
+            tick_randomly(r, global_index_offset + r);
+        } else {
+            tick_normally(r);
+        }
+    }
+}
 
-            living_neighbors = 0;
-            // Loop over 3x3 section centered on i,j
-            for (dr = -1; dr <= 1; ++dr) {
-                for (dc = -1; dc <= 1; ++dc) {
-                    // Exclude current cell
-                    if (dr != 0 || dc != 0) {
-                        // Get actual coordinates
-                        c1 = (c + dc) % rowlen;
-                        r1 = r + dr;
-                        // Check the cell
-                        if (CHECK(r1, c1)) {
-                            ++living_neighbors;
-                        }
+/**
+ * Run a single normal tick of the given row. Does not commit.
+ */
+void tick_normally(int local_row)
+{
+    int living_neighbors, c, dr, dc, r1, c1;
+    for (c = 0; c < rowlen; ++c) {
+        living_neighbors = 0;
+        // Loop over 3x3 section centered on i,j
+        for (dr = -1; dr <= 1; ++dr) {
+            for (dc = -1; dc <= 1; ++dc) {
+                // Exclude current cell
+                if (dr != 0 || dc != 0) {
+                    // Get actual coordinates
+                    c1 = (c + dc) % rowlen;
+                    r1 = local_row + dr;
+                    // Check the cell
+                    if (CHECK(r1, c1)) {
+                        ++living_neighbors;
                     }
                 }
             }
-            // Cell dies if less than 2 or more than 3 neighbors
-            if (living_neighbors < 2 || living_neighbors > 3) {
-                KILL(r, c);
-            } else if (living_neighbors == 3) { // Cell is born with exactly 3 neighbors
-                BIRTH(r, c);
-            } else {
-                PERSIST(r, c); // Nothing changes otherwise
-            }
+        }
+        // Cell dies if less than 2 or more than 3 neighbors
+        if (living_neighbors < 2 || living_neighbors > 3) {
+            KILL(local_row, c);
+        } else if (living_neighbors == 3) { // Cell is born with exactly 3 neighbors
+            BIRTH(local_row, c);
+        } else {
+            PERSIST(local_row, c); // Nothing changes otherwise
         }
     }
 }
@@ -270,12 +278,13 @@ void* do_ticks(void* arg)
     int myrank = mpi_myrank, commsize = mpi_commsize;
     int prev_rank = (myrank - 1 + commsize) % commsize;
     int next_rank = (myrank + 1) % commsize;
+    int global_index_offset = myrank * rows_per_rank;
+    double threshold = g_threshold;
     MPI_Request send[2];
     MPI_Request recv[2];
     int i;
     for (i = 0; i < ticks; i++) {
-        // TODO: check for main thread and recv ghost rows from MPI
-        tick(start, end);
+        tick(start, end, global_index_offset, threshold);
         // wait for all threads to finish ticking before swapping out ghost rows
         pthread_barrier_wait(&barrier);
         // thread 0 receives ghost rows via MPI
@@ -290,9 +299,6 @@ void* do_ticks(void* arg)
         if (start == 0) {
             MPI_Isend(&chunk[0], rowlen, MPI_UNSIGNED_CHAR, prev_rank, i, MPI_COMM_WORLD, &send[0]);
             MPI_Isend(&chunk[rows_per_rank - 1], rowlen, MPI_UNSIGNED_CHAR, next_rank, i, MPI_COMM_WORLD, &send[1]);
-            printf("This is the main thread: global bounds=[%ld, %ld]\n",
-                (long)myrank * rows_per_rank + start,
-                (long)myrank * rows_per_rank + end);
             // wait for ghost rows to be received and boundary rows to be sent
             MPI_Waitall(2, recv, MPI_STATUSES_IGNORE);
             MPI_Waitall(2, send, MPI_STATUSES_IGNORE);
