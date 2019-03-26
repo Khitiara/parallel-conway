@@ -1,5 +1,6 @@
 *.o
 pconway
+cv
 .directory
 *.kate-swp
 .vscode
