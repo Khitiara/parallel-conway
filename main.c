@@ -312,13 +312,12 @@ void* do_ticks(void* arg)
 
 void write_universe(const char* fpath)
 {
-    int mpi_rank;
+    int mpi_rank = mpi_myrank, rows_per_rank = rows_per_chunk;
     MPI_File fh;
     MPI_File_open(MPI_COMM_WORLD, fpath, MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
     MPI_File_preallocate(fh, rowlen * rowlen);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    for (int i = 0; i < rows_per_chunk; ++i) {
-        MPI_File_write_at(fh, mpi_rank * rowlen, chunk[i], rowlen, MPI_UNSIGNED_CHAR, MPI_STATUS_IGNORE);
+    for (int i = 0; i < rows_per_rank; ++i) {
+        MPI_File_write_at(fh, (mpi_rank * rows_per_rank + i) * rowlen, chunk[i], rowlen, MPI_UNSIGNED_CHAR, MPI_STATUS_IGNORE);
     }
     MPI_File_close(&fh);
 }
