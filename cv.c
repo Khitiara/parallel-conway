@@ -74,7 +74,12 @@ int main(int argc, char* argv[])
             }
         }
         // write out data
-        MPI_File_write_at(out_file, rank * blocks_per_row * row_count, alive_counts, blocks_per_row * row_count, MPI_INT, MPI_STATUS_IGNORE);
+        MPI_File_write_at(out_file,
+            rank * blocks_per_row * row_count * sizeof(int),
+            alive_counts,
+            blocks_per_row * row_count,
+            MPI_INT,
+            MPI_STATUS_IGNORE);
     }
 
     MPI_File_close(&out_file);
