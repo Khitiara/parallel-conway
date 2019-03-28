@@ -1,5 +1,6 @@
 *.o
 pconway
+output
 cv
 .directory
 *.kate-swp

@@ -19,7 +19,7 @@
 #include <pthread.h>
 
 #if BGQ == 1
-#include <hwi/include/gqc/A2_inlines.h>
+#include <hwi/include/bqc/A2_inlines.h>
 #else
 #define GetTimeBase(notused) (g_processor_frequency * MPI_Wtime(notused))
 #endif
@@ -336,7 +336,7 @@ void* do_ticks(void* arg)
     return NULL;
 }
 
-void write_universe(const char* fpath)
+void write_universe(char* fpath)
 {
     int mpi_rank = mpi_myrank, rows_per_rank = rows_per_chunk;
     MPI_File fh;
