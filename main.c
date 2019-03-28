@@ -32,6 +32,7 @@
 #define DEAD 0
 #define MAX_ADDITIONAL_THREAD_COUNT 63
 #define MAX_TICKS 256
+#define MAX_FILE_NAME 64
 
 #define CHECK(x, y) (chunk[x][y] & 1)
 #define BIRTH(x, y) (chunk[x][y] |= 2)
@@ -94,6 +95,8 @@ void write_universe(const char* fpath);
 int main(int argc, char* argv[])
 {
     int threads_per_rank;
+    char universe_out_name[MAX_FILE_NAME];
+    char alive_stats_name[MAX_FILE_NAME];
     // Example MPI startup and using CLCG4 RNG
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_commsize);
@@ -108,6 +111,10 @@ int main(int argc, char* argv[])
     threads_per_rank = atoi(argv[1]);
     g_ticks = atoi(argv[2]);
     g_threshold = strtod(argv[3], NULL);
+    strcpy(universe_out_name, argv[5]);
+    strcpy(alive_stats_name, argv[5]);
+    strcat(universe_out_name, ".bin");
+    strcat(alive_stats_name, ".csv");
     pthread_barrier_init(&barrier, NULL, threads_per_rank);
     pthread_mutex_init(&alive_lock, NULL);
 
@@ -144,6 +151,7 @@ int main(int argc, char* argv[])
         MPI_Reduce(alive_count, final_alive_count, MAX_TICKS, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
         // stop timer
         if (mpi_myrank == 0) {
+            FILE* alive_stats_file;
             double time;
             int ticks = g_ticks;
             g_end_cycles = GetTimeBase();
@@ -165,10 +173,13 @@ int main(int argc, char* argv[])
                 threads_per_rank * mpi_commsize,
                 rows_per_chunk,
                 rows_per_thread);
-            puts("Alive statistics (CSV):\nTick,Alive");
+            printf("Alive statistics (CSV) written to '%s'\n", alive_stats_name);
+            alive_stats_file = fopen(alive_stats_name, "w");
+            fputs("Tick,Alive\n", alive_stats_file);
             for (i = 0; i < ticks; ++i) {
-                printf("%d,%d\n", i, final_alive_count[i]);
+                fprintf(alive_stats_file, "%d,%d\n", i, final_alive_count[i]);
             }
+            fclose(alive_stats_file);
         }
     }
     pthread_barrier_destroy(&barrier);
@@ -179,14 +190,14 @@ int main(int argc, char* argv[])
         if (mpi_myrank == 0) {
             g_start_cycles = GetTimeBase();
         }
-        write_universe(argv[5]);
+        write_universe(universe_out_name);
         // write_universe is already synchronized
         if (mpi_myrank == 0) {
             double time;
             g_end_cycles = GetTimeBase();
             time = (g_end_cycles - g_start_cycles) / g_processor_frequency;
             printf("Universe data written to '%s'\n"
-                   "     IO run time (s): %f\n", argv[5], time);
+                   "     IO run time (s): %f\n", universe_out_name, time);
         }
     }
     // END - leave MPI
