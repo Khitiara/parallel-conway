@@ -32,7 +32,7 @@
 #define DEAD 0
 #define MAX_ADDITIONAL_THREAD_COUNT 63
 #define MAX_TICKS 256
-#define MAX_FILE_NAME 64
+#define MAX_FILE_NAME 128
 
 #define CHECK(x, y) (chunk[x][y] & 1)
 #define BIRTH(x, y) (chunk[x][y] |= 2)
