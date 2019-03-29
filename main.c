@@ -78,7 +78,7 @@ void tick_normally(int local_row);
 void tick_randomly(int local_row, Gen g);
 void commit(int start, int end, int* alive_count);
 void* do_ticks(void* arg);
-void write_universe(const char* fpath);
+void write_universe(char* fpath);
 
 /***************************************************************************/
 /* Function: Main **********************************************************/
@@ -197,7 +197,8 @@ int main(int argc, char* argv[])
             g_end_cycles = GetTimeBase();
             time = (g_end_cycles - g_start_cycles) / g_processor_frequency;
             printf("Universe data written to '%s'\n"
-                   "     IO run time (s): %f\n", universe_out_name, time);
+                   "     IO run time (s): %f\n",
+                universe_out_name, time);
         }
     }
     // END - leave MPI
