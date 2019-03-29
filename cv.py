@@ -8,6 +8,7 @@ To plot this file in gnuplot, use the following commands:
 > splot "<filename>.dat" matrix with image
 """
 import sys
+import matplotlib.pyplot as plt
 
 if len(sys.argv) != 3:
     print("Usage: cv <filename> <rowlen>")
@@ -16,11 +17,13 @@ if len(sys.argv) != 3:
 file_name = sys.argv[1]
 rowlen = int(sys.argv[2])
 
+data = [[0 for i in range(rowlen)] for j in range(rowlen)]
+
 with open(file_name, 'rb') as file:
-    with open(file_name + '.dat', 'w') as out_file:
-        for i in range(rowlen):
-            line = file.read(rowlen * 4)
-            for j in range(0, len(line), 4):
-                count = int.from_bytes(line[j:j+4], byteorder='little')
-                out_file.write('{0} '.format(count))
-            out_file.write('\n')
+    for i in range(rowlen):
+        line = file.read(rowlen * 4)
+        for j in range(0, len(line), 4):
+            data[i][j // 4] = int.from_bytes(line[j:j + 4], byteorder='little')
+
+plt.imshow(data, cmap='hot', interpolation='nearest')
+plt.savefig(file_name + '.png', frameon=False, dpi=640)
