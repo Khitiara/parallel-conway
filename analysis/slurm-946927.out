@@ -1,0 +1,40 @@
+Computation statistics:
+    Compute time (s): 59.444643
+       Compute ticks: 256
+   Avg time/tick (s): 0.232206
+           MPI Ranks: 256
+    Threads per rank: 4
+       Total threads: 1024
+       Rows per rank: 128
+     Rows per thread: 32
+Alive statistics (CSV) written to '/gpfs/u/scratch/PCP8/PCP8nrch/16-node-16-rank-4-thread-25-threshold.csv'
+Computation statistics:
+    Compute time (s): 61.044606
+       Compute ticks: 256
+   Avg time/tick (s): 0.238455
+           MPI Ranks: 64
+    Threads per rank: 16
+       Total threads: 1024
+       Rows per rank: 512
+     Rows per thread: 32
+Alive statistics (CSV) written to '/gpfs/u/scratch/PCP8/PCP8nrch/16-node-4-rank-16-thread-25-threshold.csv'
+Computation statistics:
+    Compute time (s): 63.945371
+       Compute ticks: 256
+   Avg time/tick (s): 0.249787
+           MPI Ranks: 32
+    Threads per rank: 32
+       Total threads: 1024
+       Rows per rank: 1024
+     Rows per thread: 32
+Alive statistics (CSV) written to '/gpfs/u/scratch/PCP8/PCP8nrch/16-node-2-rank-32-thread-25-threshold.csv'
+Computation statistics:
+    Compute time (s): 65.457972
+       Compute ticks: 256
+   Avg time/tick (s): 0.255695
+           MPI Ranks: 16
+    Threads per rank: 64
+       Total threads: 1024
+       Rows per rank: 2048
+     Rows per thread: 32
+Alive statistics (CSV) written to '/gpfs/u/scratch/PCP8/PCP8nrch/16-node-1-rank-64-thread-25-threshold.csv'
