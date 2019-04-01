@@ -1,0 +1,12 @@
+Computation statistics:
+    Compute time (s): 12.277781
+       Compute ticks: 256
+   Avg time/tick (s): 0.047960
+           MPI Ranks: 2048
+    Threads per rank: 4
+       Total threads: 8192
+       Rows per rank: 16
+     Rows per thread: 4
+Alive statistics (CSV) written to '/gpfs/u/scratch/PCP8/PCP8sbrr/128-node-16-rank-4-thread-50-threshold.csv'
+Universe data written to '/gpfs/u/scratch/PCP8/PCP8sbrr/128-node-16-rank-4-thread-50-threshold.bin'
+     IO run time (s): 11.988865
